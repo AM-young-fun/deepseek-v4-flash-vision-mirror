@@ -123,6 +123,30 @@ try {
 
   // fonts must be resolved before capture or text metrics shift between runs
   await cdp.send("Runtime.evaluate", { expression: "document.fonts.ready", awaitPromise: true }, sessionId).catch(() => {});
+
+  // Scroll-reveal pass. Sites that animate content in on scroll render below-the-fold
+  // sections as blank in a plain headless capture, because the reveal never fires — and a
+  // blank band looks exactly like a design decision. Walking the page once and returning to
+  // the top makes the capture show what a human actually sees.
+  if (argv.includes("--scroll")) {
+    const step = Number(flag("scroll-step", 0.8));
+    await cdp.send("Runtime.evaluate", {
+      expression: `(async () => {
+        const step = window.innerHeight * ${step};
+        const total = document.documentElement.scrollHeight;
+        for (let y = 0; y < total; y += step) {
+          window.scrollTo(0, y);
+          await new Promise(r => requestAnimationFrame(() => setTimeout(r, 260)));
+        }
+        window.scrollTo(0, total);
+        await new Promise(r => setTimeout(r, 400));
+        window.scrollTo(0, 0);
+        await new Promise(r => setTimeout(r, 500));
+      })()`,
+      awaitPromise: true,
+    }, sessionId).catch(() => {});
+  }
+
   await new Promise((r) => setTimeout(r, settleMs));
 
   // report what actually got laid out — useful for structural checks

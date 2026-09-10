@@ -1,7 +1,15 @@
 # deepseek-v4-flash-vision-mirror
 
-A skill that lets a **text-only model run a real build → look → fix loop** by borrowing eyes
+Two skills that let a **text-only model run a real build → look → fix loop** by borrowing eyes
 from an image-capable route.
+
+- **`vision-loop`** — the protocol: pin an image-capable route, transport images at 1:1,
+  evaluate with coverage and edge/flat discipline, and **validate your reference before
+  optimising against it**.
+- **`web-repro`** — the page-level procedure layered on top: capture a real reference, build a
+  structural model before touching pixels, and verify globally / structurally / locally. It
+  exists because region crops are structurally blind to the failures that broke a real
+  reproduction.
 
 The name is the point: the model doing the work has no vision. It doesn't need any — vision
 capability belongs to the *route*, not to the model, and a subagent can be pinned to a
@@ -35,12 +43,44 @@ there is nothing to align to.
 ## Install
 
 ```bash
-cp -r vision-loop ~/.agents/skills/     # user-level, all projects
+cp -r vision-loop web-repro ~/.agents/skills/     # user-level, all projects
 # or
-cp -r vision-loop <project>/.dsh/skills/  # project-level
+cp -r vision-loop web-repro <project>/.dsh/skills/  # project-level
 ```
 
 DSH discovers skills from `~/.agents/skills`, `$DSH_HOME/skills`, and `<project>/.dsh/skills`.
+`web-repro` requires `vision-loop`, which it cross-references.
+
+## Why page-level verification is a separate skill
+
+Region-by-region comparison — the core of `vision-loop` — is what makes detail work possible, and
+it is **structurally incapable** of seeing a framing error: cropping both sides at identical
+coordinates guarantees you can only see differences *inside* the crop.
+
+A real attempt, measured both ways:
+
+| Compared against | MAE |
+|---|---|
+| Its own reference capture | **1.37** — the number it reported as success |
+| The real site, at a real viewport, first 900px | **30.59** |
+| The real site, full page | **47.35** |
+
+The navigation bar scored 3.68 (genuinely right). The hero copy scored **64.88** while vision
+agents were calling it a faithful match. The loop was measuring its distance to its own mistake.
+
+Four things it never noticed, all invisible to a region crop:
+
+- the capture was taken at a viewport as tall as the page, so a `min-h-[92vh]` hero made the
+  reference **1598px taller than the real page** at a normal window
+- the capture was **truncated**: the page's own `scrollHeight` at that viewport was 5706px, the
+  image was 4235px
+- below-the-fold sections rendered as **blank bands** because scroll-reveal animations never
+  fired — and a blank band looks exactly like a designed flat band, so a video player and an
+  entire featured-episode section were reproduced as empty rectangles
+- a real `<video>` element could not be distinguished from a flat block by pixels
+
+`web-repro` exists for those four. Its rules are the procedure; `vision-loop`'s Rule 0 is the
+principle behind them.
 
 ## Core rules
 
@@ -115,12 +155,16 @@ geometry, not a limit of the approach.
 ## What's here
 
 ```
-vision-loop/        the skill: borrowed eyes, 1:1 transport, evaluation discipline, artifact-class gate
+vision-loop/        the protocol: borrowed eyes, 1:1 transport, evaluation discipline, artifact-class gate,
+                    and validating your reference before optimising against it
   SKILL.md
   tiles.mjs         slice any image into transport-safe 1:1 tiles (checks both caps)
   render-eval.mjs   render a candidate and score it: coverage check, edge/flat split, control-ready
-tools/              used by the site reproduction; not part of the skill itself
-  shot-attach.mjs   screenshot HTML over CDP through a long-lived Chrome — no per-render escalation
+web-repro/          the page-level procedure: real reference, structural model, three-way verification
+  SKILL.md
+tools/              used by the site reproduction; not part of either skill
+  shot-attach.mjs   screenshot HTML over CDP through a long-lived Chrome — no per-render escalation,
+                    and --scroll fires reveal animations before capturing
   probe-dom.mjs     read a render's own layout back: boxes in fractional CSS px, computed styles, tokens
 examples/
   trace.mjs         raster -> vector: OKLab k-means + boundary tracing + Bezier fitting

@@ -33,6 +33,58 @@ Continuous-tone targets have no structure to recover. Tracing them yields a loss
 stylization, not a reproduction — measure before promising fidelity (`render-eval.mjs`).
 Decide this class first; it invalidates the rest of the workflow when it comes back "photo".
 
+## 0. Validate the reference before you optimize against it
+
+**The reference is an input you produced, not ground truth you were given.** A loop that only
+ever asks "does mine match my reference?" converges confidently on that reference's errors. This
+step is first because skipping it invalidates every later measurement, and no amount of
+iteration recovers from it.
+
+- **Capture at the viewport the acceptance test will actually use.** Not one you invented. A
+  page whose hero is `min-h-[92vh]` has a *different total height at every viewport height* —
+  measured here: 2637px at a 900px-tall window, 4235px at 2637, 5706px at 4235. There is no
+  single "full page" for such a site, so the capture must be pinned to a real window size.
+- **Verify the capture is complete.** Ask the page for its own `scrollHeight` at that viewport
+  and confirm the image is that tall. A capture that silently truncates looks exactly like a
+  shorter page.
+- **Reveal scroll-animated content.** Sites that fade sections in on scroll render
+  below-the-fold content as *blank* in a plain headless capture. A blank band looks exactly like
+  a designed flat band. Walk the page once (see `--scroll`), or you will reproduce an
+  un-animated skeleton as if it were the design.
+- **Get a structural model before touching pixels.** Element boxes, section list, computed
+  heights, which elements are `fixed`, which are `vh`-sized, which are `<video>`. Pixels cannot
+  distinguish "a video that did not load" from "a flat block by design"; the DOM can.
+  `probe-dom.mjs` does this in one call.
+- **Then verify globally.** Only after the frame is right does region-level comparison mean
+  anything.
+
+### A local comparison cannot detect a framing error
+
+Cropping both sides at identical coordinates guarantees you can only ever see differences
+*inside* the crop. Page structure, a missing section, a wrong section height, viewport
+dependence and a truncated reference are all invisible to it **by construction** — the crop
+looks self-consistent because it is.
+
+Run **global, structural and local** checks as separate steps:
+
+| Check | Catches | Blind to |
+|---|---|---|
+| Whole-page diff at a real viewport | missing/extra sections, total height, gross layout | detail |
+| Structural diff (boxes and computed sizes) | viewport dependence, `fixed` vs static, wrong section heights, an unloaded `<video>` | visual character |
+| Region 1:1 crops | type, colour, spacing, detail | framing, structure, anything outside the crop |
+
+### Do not hand your framing to the checker
+
+If you choose the crop coordinates and write the questions, you only get answers to questions you
+already knew to ask. Include an open-ended ask — *"what is on the reference that is missing from
+this?"* — and let the checker look outside your frame.
+
+### A plateau is not convergence
+
+A metric that stops moving means **your edits stopped moving that number**, not that the output
+is right. MAE sat at 1.37 here while an entire section was missing and the page was 60% too tall.
+Before concluding you are done, re-validate the **target**, not just the distance to it.
+
 ## 1. Confirm the route can see
 
 `read_image` gates on the *calling route* declaring `image` in `inputModalities`. A
@@ -145,6 +197,11 @@ its own parameters.
 
 | Mistake | Reality |
 |---|---|
+| **Treating your own reference capture as ground truth** | It is an input you produced. Validate it first or every later measurement inherits its errors |
+| **Capturing at a viewport you invented** | If the layout is `vh`-dependent the page height changes with the window; there is no single "full page" |
+| **Comparing only region-by-region** | Identical crops can only reveal differences inside the crop. Structure, framing and truncation are invisible by construction |
+| **Writing the checker's questions** | You get answers only to questions you already had. Include an open-ended ask |
+| **Reading a plateau as convergence** | MAE sat at 1.37 here while a whole section was missing and the page was 60% too tall |
 | "It's close enough" — skipping the look | The look is the only step that finds what metrics cannot see |
 | Trusting your own metric without checking coverage | Uncovered pixels silently read as black |
 | Reporting one MAE/PSNR as the verdict | Report a control; split edge vs flat |
@@ -158,6 +215,10 @@ its own parameters.
 
 ## Red Flags — STOP
 
+- You have not verified that your reference capture is complete, at a real viewport, with scroll reveals fired
+- Your only comparison is region crops — nothing global, nothing structural
+- You wrote the checker's questions and crop coordinates
+- Your metric has plateaued and you are about to call it done
 - You are about to describe an image you have not read
 - You are about to ask a subagent to look at an image **without pinning an image-capable route**
 - You are about to report a fidelity number without separating unpainted from antialiased
@@ -170,3 +231,5 @@ its own parameters.
 
 - `tiles.mjs` — slice any image into transport-safe 1:1 tiles (checks both caps)
 - `render-eval.mjs` — render a candidate and score it: coverage check, edge/flat split, control-ready
+- `../tools/shot-attach.mjs` — render HTML over CDP; `--scroll` fires scroll-reveal animations before capture
+- `../tools/probe-dom.mjs` — the structural model: element boxes, computed sizes, tokens

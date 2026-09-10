@@ -7,7 +7,38 @@ repository author); the output is hand-written HTML/CSS, not a trace.
 Contrast with [`../hero-trace/`](../hero-trace/), which deliberately does the *wrong* thing to a
 continuous-tone image and measures what it costs. This example does the right thing.
 
+> ## ⚠ Correction: the numbers below measure the wrong thing
+>
+> This example was produced **before** the reference-validation rule existed, and its headline
+> score is self-referential. The 1.37 MAE compares the reproduction against **the capture this
+> process itself produced**, not against the site. Measured against the real site at a real
+> viewport:
+>
+> | Compared against | MAE |
+> |---|---|
+> | Its own capture | **1.37** |
+> | Real site, first 900px at a 1440×900 window | **30.59** |
+> | Real site, full page | **47.35** |
+>
+> The navigation bar scored 3.68 — genuinely right. The hero copy scored **64.88** while vision
+> agents were calling it a faithful match.
+>
+> Three structural failures, none visible to a region crop:
+>
+> - the capture used a viewport **as tall as the page**, so a `min-h-[92vh]` hero made it
+>   1598px taller than the real page at a normal window
+> - the capture was **truncated** — the page reports `scrollHeight` 5706 at that viewport, the
+>   image is 4235
+> - below-the-fold content rendered as **blank bands** because scroll-reveal animations never
+>   fired, so a video player and a whole featured-episode card were reproduced as empty
+>   rectangles
+>
+> Keep this example as a record of the failure mode, not as a fidelity claim. The corrected
+> procedure is [`../../web-repro/SKILL.md`](../../web-repro/SKILL.md).
+
 ## Result
+
+Measured against the capture (see the correction above before reading anything into these):
 
 Rendered at 1440×4235 against a 1440×4235 reference capture:
 
