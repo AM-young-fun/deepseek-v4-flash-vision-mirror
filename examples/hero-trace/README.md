@@ -13,10 +13,18 @@ against were built from the trace's own palette.
 | | |
 |---|---|
 | File | `reference.webp` — 1360×2048, 159 KB |
+| Image credit | **ayasemai.com** |
 | Pixels | 2,785,280 — **4.35× the 640,000 px transport budget** |
 | Distinct colours | 132,758 (4.8% of pixels) |
 | Top-10 colour share | **6.5%** |
 | Flat neighbours (Δ≤3) | 62.1% |
+
+> **Image credit:** the artwork in this directory (`reference.webp`) is from
+> **[ayasemai.com](https://ayasemai.com)**. It is included here solely as a technical test
+> input for the tracing pipeline, and all rights remain with its source. The derived files
+> (`trace.svg`, the renders, comparison and error images) are outputs of this repository's
+> tooling and are covered by the same attribution. If you are the rights holder and would
+> like it removed, open an issue and it will be taken down.
 
 A UI or poster has few flat fills and a dominant palette: the control measured while building
 this skill was 916 colours with its top 10 covering 86.6%. At 132,758 colours with the top 10
