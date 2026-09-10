@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>涩谷-小舞20XX｜官方网站</title>
+<style>
+  /* ------------------------------------------------------------------
+     Reproduction of ayasemai.com/zh/ measured from a 1440x4235 reference.
+     Every value below is a measured one: positions from 1:1 crops of the
+     reference, colours from sampled pixel cores.
+
+     NOT reproduced in code: the hero painting (assets/hero.webp). It is a
+     bitmap illustration; it is placed as the site's own artwork and is
+     excluded from the fidelity claim.
+     ------------------------------------------------------------------ */
+
+  :root{
+    --bg:        #101319;   /* page, nav and hero background          */
+    --bg-media:  #0a0d13;   /* the flat band under TRAILER            */
+    --bg-footer: #0f141d;   /* pre-footer + footer                    */
+    --rule:      #1b2028;   /* 1px footer hairline                    */
+    --pink:      #fd5fa9;   /* primary button fill                    */
+    --pink-ink:  #1e0d15;   /* primary button label                   */
+    --quote:     #f2adc7;   /* hero quote                             */
+    --mint:      #8dd2c3;   /* hero eyebrow                           */
+    --mint-2:    #8fd7c7;   /* TRAILER label                          */
+    --ink:       #e0e7f0;   /* H1                                     */
+    --ink-2:     #dfe6ef;   /* section heading                        */
+    --grey:      #8e99a9;   /* nav links, subtitle, body              */
+    --grey-2:    #8894a5;   /* footer tagline and chips               */
+    --grey-3:    #4d5663;   /* legal, second line                     */
+    --grey-4:    #8b97a8;   /* legal, first line                      */
+    --line-btn:  #3f4146;   /* secondary button border                */
+    --cyan-line: #345a6f;   /* nav pill border                        */
+    --cyan-dot:  #72d4fe;   /* nav pill dot                           */
+    --cyan-ink:  #6dcbf3;   /* nav pill label                         */
+    --chip-line: #272c34;   /* footer chip borders                    */
+    --wrap:      1112px;    /* measured content width (164px margins at 1440) */
+    --serif: "Songti SC","Noto Serif CJK SC","Source Han Serif SC","Hiragino Mincho ProN",serif;
+    --sans: -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--grey);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{width:var(--wrap);margin:0 auto}
+
+  /* ---------- nav : measured 56px tall, background identical to the page ---------- */
+  .nav{height:56px;background:var(--bg)}
+  .nav .wrap{height:100%;display:flex;align-items:center}
+  .brand{
+    font-family:var(--serif);font-size:15px;line-height:1;letter-spacing:2.8px;
+    /* hard two-tone stop, measured: pink plateau to 63% of the ink span, then cyan */
+    background:linear-gradient(90deg,var(--brand-pink) 0 63%,var(--brand-cyan) 63% 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand{--brand-pink:#f0a8c2;--brand-cyan:#72d3fd}
+
+  .nav-links{display:flex;margin-left:auto;align-items:center;gap:21px}
+  .linkgroup{display:flex;gap:32px}
+  .nav-links a{
+    color:var(--grey);text-decoration:none;font-size:14px;line-height:1;
+    display:inline-block;
+  }
+  .lang{
+    width:82px;height:26px;border:1px solid var(--cyan-line);border-radius:13px;
+    display:inline-flex;align-items:center;justify-content:center;gap:12px;
+    color:var(--cyan-ink);font-size:13px;line-height:1;
+  }
+  .lang::before{
+    content:"";box-sizing:border-box;width:8px;height:8px;border-radius:50%;
+    background:rgba(114,212,254,.7);border:2px solid var(--cyan-dot);
+    box-shadow:0 0 6px 2px rgba(114,212,254,.45);
+  }
+
+  /* ---------- hero : 2590px tall, painting full-bleed on the right ---------- */
+  .hero{position:relative;z-index:1;height:2581px;background:var(--bg)}
+  .hero img{
+    position:absolute;top:0;left:540px;width:900px;height:2581px;   /* measured left edge */
+    object-fit:cover;object-position:left top;
+  }
+  .hero > .wrap{position:relative;height:100%;padding-top:1007px}   /* text ink top at source y1076 */
+
+  .eyebrow{display:flex;align-items:center;gap:14px;color:var(--mint);
+           font-size:13px;line-height:1;letter-spacing:3.2px}      /* measured 16.2px pitch */
+  .eyebrow::before{
+    content:"";box-sizing:border-box;width:10px;height:10px;border-radius:50%;
+    border:2px solid #4b849f;box-shadow:0 0 6px 1px rgba(75,132,159,.5);
+  }
+  h1{
+    font-family:var(--serif);font-weight:400;font-size:76px;line-height:1;
+    letter-spacing:0;color:var(--ink);margin:35px 0 0;                  /* ink top y1131 */
+  }
+  .subtitle{
+    color:var(--grey);font-size:14px;line-height:1;letter-spacing:5px;
+    margin:17px 0 0;                                                    /* ink top y1217 */
+  }
+  .quote{
+    font-family:var(--serif);font-size:24px;line-height:1;color:var(--quote);
+    margin:52px 0 0;                                                    /* ink left x180 */
+  }
+  .lede{
+    font-size:14px;line-height:28px;color:var(--grey);
+    margin:22px 0 0;width:575px;                                        /* wraps after 接住 */
+  }
+  .actions{display:flex;gap:16px;margin-top:40px}                       /* ink top y1424 */
+  .btn{
+    height:42px;border-radius:21px;border:0;font-family:var(--sans);
+    font-size:14px;line-height:1;display:inline-flex;align-items:center;
+    justify-content:center;cursor:pointer;
+  }
+  .btn-primary{width:112px;background:var(--pink);color:var(--pink-ink);font-weight:600;
+    box-shadow:0 0 18px 4px rgba(253,95,169,.35)}
+  .btn-ghost{width:142px;background:transparent;border:1px solid var(--line-btn);color:var(--ink-2)}
+
+  /* ---------- trailer heading ----------
+     In the reference this heading is NOT a band of its own: it sits over the bottom of the
+     hero, and the CJK feet cross the y2637 boundary onto the media block below. Positioning
+     it absolutely inside .hero (which is left overflow-visible and stacked above .media) is
+     what makes that straddle come out right. */
+  .trailer-head{position:absolute;left:0;right:0;top:2513px;z-index:2}
+  .kicker{
+    color:var(--mint-2);font-size:12px;line-height:1;letter-spacing:5px;
+  }
+  h2{
+    font-family:var(--serif);font-weight:400;font-size:32px;line-height:1;
+    color:var(--ink-2);margin:18px 0 0;
+  }
+  /* the media band: flat #0a0d13. On the live site this holds the trailer player; nothing
+     rendered in the capture, so the reference shows it as a uniform block. */
+  .media{position:relative;z-index:0;height:1119px;background:var(--bg-media)}
+
+  /* ---------- footer ---------- */
+  .footer{background:var(--bg-footer);height:479px;padding-top:300px}  /* hairline at source y4056 */
+  .footer .rule{border-top:1px solid var(--rule)}
+  .footer .wrap{display:flex;padding-top:45px}                        /* wordmark ink top y4104 */
+  .footer .brand{font-size:19px;font-weight:600;letter-spacing:0;background:none;color:#f2a7c3;-webkit-text-fill-color:#f2a7c3}
+  .footer .tagline{color:var(--grey-2);font-size:14px;line-height:1;margin:15px 0 0}
+  .chips{display:flex;gap:12px;margin-top:19px}                       /* chip top y4169 */
+  .chip{
+    height:26px;border:1px solid var(--chip-line);border-radius:13px;
+    color:var(--grey-2);font-size:12px;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:0 12px;
+  }
+  .legal{margin-left:auto;color:var(--grey-4);font-size:11px;line-height:20px;width:220px}
+  .legal .dim{color:var(--grey-3)}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <span class="brand">渋谷・マイ<span class="xx">20XX</span></span>
+    <nav class="nav-links">
+      <span class="linkgroup"><a href="#">首页</a><a href="#">故事</a><a href="#">角色</a><a href="#">剧集</a></span>
+      <span class="lang">日本語</span>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <img src="assets/hero.webp" alt="涩谷雨夜中撑着透明伞的小舞" width="900" height="2581">
+  <div class="wrap">
+    <p class="eyebrow">治愈系仿生人短剧</p>
+    <h1>渋谷・マイ20XX</h1>
+    <p class="subtitle">涩谷 - 小舞 20XX</p>
+    <p class="quote">「欢迎回家。今天也是最后一班电车呢。」</p>
+    <p class="lede">科技很高，生活很旧，孤独没变。在总下着雨的涩谷，一个温柔得不像话的仿生人，悄悄接住了一个疲惫的人。</p>
+    <div class="actions">
+      <button class="btn btn-primary">观看预告</button>
+      <button class="btn btn-ghost">走进这个故事</button>
+    </div>
+  </div>
+
+  <div class="trailer-head">
+    <div class="wrap">
+      <p class="kicker">TRAILER</p>
+      <h2>预告篇</h2>
+    </div>
+  </div>
+</section>
+<div class="media"></div>
+
+<footer class="footer">
+  <div class="rule"></div>
+  <div class="wrap">
+    <div>
+      <span class="brand">渋谷・マイ20XX</span>
+      <p class="tagline">在总下着雨的涩谷，被温柔接住。</p>
+      <div class="chips">
+        <span class="chip">小红书</span>
+        <span class="chip">bilibili</span>
+        <span class="chip">抖音</span>
+        <span class="chip">TikTok</span>
+      </div>
+    </div>
+    <div class="legal">
+      © MIRAI ROBOTICS / 渋谷・マイ20XX<br>
+      <span class="dim">MIRAI ROBOTICS</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -15,6 +15,23 @@ It cannot see the reference, cannot see what it produced, and cannot tell whethe
 helped. The failure mode is not "it refuses" — it is **confident, plausible, unverifiable
 output**. Every rule in this skill exists because that failure was observed and measured.
 
+## Proven capability
+
+One protocol, demonstrated on the two artifact classes that behave completely differently:
+
+| Reference is | Reproduce by rendering? | Demonstration |
+|---|---|---|
+| UI, page, poster, chart, layout, icon | **Yes** — read the structure, write code, render, compare | [`examples/site-repro/`](examples/site-repro/) — a live site rebuilt in hand-written HTML/CSS to **MAE 1.37 / PSNR 29.92 dB**, with the hero, nav and footer judged a faithful match by vision |
+| Photograph, painting, illustration | **No** — a tracer yields a lossy stylization, not a reproduction | [`examples/hero-trace/`](examples/hero-trace/) — traced to PSNR 24.65 dB, SVG **4.2× the source**, detail visibly gone |
+
+Deciding which row you are in is step one, and the single most important rule in the skill.
+
+**What it cannot do.** Match a font it does not have — the worst region of the site
+reproduction (MAE 4.53) is font-file substitution, not layout, with every measured position
+within 1–2px. Repaint a bitmap painting in code. Produce responsive, hover, focus or motion
+states that a static reference does not contain. And it cannot **design**: with no reference
+there is nothing to align to.
+
 ## Install
 
 ```bash
@@ -98,21 +115,58 @@ geometry, not a limit of the approach.
 ## What's here
 
 ```
-vision-loop/
-  SKILL.md          the skill
-  tiles.mjs         slice any image into transport-safe 1:1 tiles (both caps)
+vision-loop/        the skill: borrowed eyes, 1:1 transport, evaluation discipline, artifact-class gate
+  SKILL.md
+  tiles.mjs         slice any image into transport-safe 1:1 tiles (checks both caps)
   render-eval.mjs   render a candidate and score it: coverage check, edge/flat split, control-ready
+tools/              used by the site reproduction; not part of the skill itself
+  shot-attach.mjs   screenshot HTML over CDP through a long-lived Chrome — no per-render escalation
+  probe-dom.mjs     read a render's own layout back: boxes in fractional CSS px, computed styles, tokens
 examples/
   trace.mjs         raster -> vector: OKLab k-means + boundary tracing + Bezier fitting
-  hero-trace/       a worked run of the loop on a continuous-tone illustration, with measurements
+  site-repro/       the structural case — a live site rebuilt in hand-written HTML/CSS
+  hero-trace/       the continuous-tone case — tracing what cannot be traced
 ```
 
-## Worked example
+## Worked examples
+
+### The structural case: rebuilding a site
+
+[`examples/site-repro/`](examples/site-repro/) rebuilds
+[ayasemai.com/zh/](https://ayasemai.com/zh/) in HTML/CSS — original artwork by the repository
+author — and scores **MAE 1.37 / PSNR 29.92 dB** over a 1440×4235 page.
+
+![reference left, reproduction right](examples/site-repro/compare-vs-reference.jpg)
+
+*Left: the reference. Right: the reproduction.*
+
+This example is where the division of labour becomes measurable. The TRAILER heading was
+**completely missing** from the reproduction at one point (a CSS selector bug: `.hero .wrap` also
+matched a nested `.wrap`, pushing the heading 1007px down into the media band). The region MAE
+at that moment was **1.97**; after the heading rendered correctly it was **2.22**.
+
+**The metric went up when the defect was fixed, and barely moved while an entire heading was
+absent.** Vision agents caught it on the first look. That is the case for vision being the
+acceptance standard and not the metric:
+
+| Role | Good at | Not good at |
+|---|---|---|
+| Vision agent | noticing *that* something is wrong, and *what kind* (missing / mispositioned / wrong colour) | explaining *why*; exact coordinates |
+| Programmatic measurement | quantifying *how much*, once you know what to measure | deciding what is wrong; naive statistics can be too coarse |
+| Pixel MAE / PSNR | tracking direction across revisions | being an acceptance criterion |
+
+Neither side is taken on trust. In the same run the agent **fabricated** a defect — reporting the
+body text "printed twice" when measurement showed it was the hero artwork showing through, the
+text simply being 8px too low — while my own fill-ratio statistic was **too coarse** to see that
+the language-pill dot was a ring rather than a disc, which the agent's luminance profile got
+right.
+
+### The continuous-tone case: tracing what cannot be traced
 
 [`examples/hero-trace/`](examples/hero-trace/) runs the loop end to end on an anime key visual —
 a girl with a translucent umbrella on a neon rain-soaked street — and reports what it cost.
-The source artwork is original work by the repository author, from their animation IP project
-at **[ayasemai.com](https://ayasemai.com)**; see that example's README for the full credit.
+The source artwork is from the same author's animation IP at
+**[ayasemai.com](https://ayasemai.com)**; see that example's README for the full credit.
 
 ![source left, trace render right](examples/hero-trace/compare.jpg)
 

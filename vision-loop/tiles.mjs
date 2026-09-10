@@ -23,7 +23,7 @@
  * Coordinates: sourceX = tileX + tile.x, sourceY = tileY + tile.y.
  */
 import { createRequire } from "node:module";
-import { mkdirSync, statSync } from "node:fs";
+import { mkdirSync, statSync, rmSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
 
 const require = createRequire("/Applications/DSH Desktop.app/Contents/Resources/app/package.json");
@@ -89,7 +89,10 @@ for (let y = 0; y < H; y += step) {
         const jpgPath = join(resolve(outDir), `${stem}_x${x}_y${y}.jpg`);
         await sharp(resolve(input)).extract({ left: x, top: y, width: w, height: h })
           .jpeg({ quality: QUALITY }).toFile(jpgPath);
-        note = `png ${(statSync(out).size / 1024).toFixed(0)}KB exceeded byte cap; re-encoded as jpeg`;
+        // Remove the oversized PNG: leaving it behind means a later glob picks up a file that
+        // the harness would reject and silently resize.
+        rmSync(out, { force: true });
+        note = `png exceeded byte cap; re-encoded as jpeg`;
         out = jpgPath;
       }
     }
