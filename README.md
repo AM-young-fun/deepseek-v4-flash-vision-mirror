@@ -111,8 +111,8 @@ examples/
 
 [`examples/hero-trace/`](examples/hero-trace/) runs the loop end to end on an anime key visual —
 a girl with a translucent umbrella on a neon rain-soaked street — and reports what it cost.
-The source artwork is credited to **[ayasemai.com](https://ayasemai.com)**; see that example's
-README for the full attribution.
+The source artwork is original work by the repository author, from their animation IP project
+at **[ayasemai.com](https://ayasemai.com)**; see that example's README for the full credit.
 
 ![source left, trace render right](examples/hero-trace/compare.jpg)
 
