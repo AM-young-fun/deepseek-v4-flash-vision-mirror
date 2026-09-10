@@ -87,23 +87,32 @@ must be tiled**: use `tiles.mjs` (sourceX = tileX + tile.x). A 964×1340 source 
 
 ## 4. Looking: ask for measurement, not opinion
 
-Vision agents are **good rulers and poor judges**. Precise measurement asks return exact
-hues, coordinates, and pixel values — and catch real defects. Asking "does this look
-good?" returns politeness.
+Vision agents are **reliable about character and terrible about coordinates**. They correctly
+identify continuous-tone vs quantized, list which features are lost, and measure colour and
+texture statistics. They localize badly: a reported "dark streak" measured 6 px, and a
+reported "speck at row 255" did not exist. Trust the qualitative read; recompute every
+location and severity yourself.
 
 - Ask for direct observation and forbid inference from filenames
 - Force an explicit failure channel (`canSee:false` + the exact error)
 - Demand "no text" be verified, not assumed
 - **Verify their claims yourself.** A throwaway remark about "red lines on the edges"
-  once exposed a real 7% coverage bug that every metric had missed.
+  once exposed a real coverage defect that every numeric metric had missed.
+- **Never put coloured scaffolding in a comparison image.** A red divider bar made agents
+  report "red hairlines along the edges"; a `#1e1e22` separator gutter made two agents report
+  a phantom 14th fill colour. Both times the artifact belonged to the experimenter, not the
+  candidate. Use a neutral border, and tell the agent what is scaffolding.
 
 ## 5. Evaluating: never trust one number
 
 Use `render-eval.mjs`, which encodes three failures this loop keeps producing:
 
-1. **Transparent pixels scored as black.** `removeAlpha()` drops alpha and leaves RGB, so
-   uncovered pixels compare as black — 7% uncovered area cost a full dB while looking
-   plausible. Always flatten onto white, and always report coverage.
+1. **Transparent pixels scored as black.** `removeAlpha()` drops alpha and leaves RGB, so an
+   uncovered pixel is compared as if it were black. Always flatten onto white. Then keep the
+   two alpha conditions apart, because they mean different things: `alpha==0` is genuinely
+   unpainted, while `0<alpha<255` is usually correct edge antialiasing — except at an internal
+   region boundary, where it is a hairline seam. Conflating them produced a published claim of
+   "7.12% uncovered" when only 0.13% was unpainted and 6.99% was ordinary antialiasing.
 2. **A single number hides the binding constraint.** Error is usually concentrated at
    edges; the tool splits edge vs flat error so you can see which one caps you.
 3. **Absolute numbers are meaningless alone.** Always score a **control** so "is it good?"
@@ -112,6 +121,13 @@ Use `render-eval.mjs`, which encodes three failures this loop keeps producing:
 Scored fidelity that did not improve across a technique change is a signal the metric is
 blind, not that the technique failed. Prefer a **controlled A/B** over an absolute number.
 
+**A disappointing absolute number is usually your execution, not the method's ceiling.**
+One trace scored 25.33 dB while a realizable flat-region rendering built from its *own*
+palette reached **29.23 dB**, and its per-pixel oracle **30.60 dB** — so ~4 dB of headroom
+existed the whole time and the geometry, not the representation, was at fault. Before
+concluding "this approach cannot do better", build the oracle and the realizable control for
+its own parameters.
+
 ## 6. Rendering
 
 - **SVG → PNG**: `sharp` (librsvg) renders in-sandbox with no browser and no escalation.
@@ -119,6 +135,11 @@ blind, not that the technique failed. Prefer a **controlled A/B** over an absolu
 - **HTML → PNG**: needs Chrome. `chrome --screenshot` **hangs** on macOS; drive
   `Page.captureScreenshot` over CDP instead. Chrome also writes outside the workspace, so
   it needs a wider sandbox every run — which breaks unattended loops. Prefer SVG.
+- **Gotcha:** chaining `.resize(a).resize(b)` in one `sharp` pipeline silently no-ops — three
+  "blur" controls returned MAE **0.000** (byte-identical to the reference). Split them into
+  separate pipelines. Any control that exactly clones the reference is this bug, not a result.
+- Supersampling does not rescue a bad trace: rendering at 8× and downsampling bought **+0.38 dB**.
+  Rasterization quality is rarely the binding constraint.
 
 ## Common Mistakes
 
@@ -127,6 +148,9 @@ blind, not that the technique failed. Prefer a **controlled A/B** over an absolu
 | "It's close enough" — skipping the look | The look is the only step that finds what metrics cannot see |
 | Trusting your own metric without checking coverage | Uncovered pixels silently read as black |
 | Reporting one MAE/PSNR as the verdict | Report a control; split edge vs flat |
+| Reading "uncovered" off a partial-alpha count | `alpha==0` is unpainted; `0<alpha<255` is usually antialiasing |
+| Assuming "25 dB is this method's ceiling" | Build its oracle and realizable control first — the gap was ~4 dB of fixable geometry |
+| Putting a coloured divider between A and B | Agents report your scaffolding as a defect in the candidate |
 | Assuming a fix worked because it sounds right | Test it, controlled. A perceptual colour space fixed hue yet barely moved PSNR; Bezier fitting did **not** remove pixel-level staircase edges |
 | Blaming a step without a controlled test | Despeckle looked harmful; disabling it cost 4.5 dB |
 | Promising pixel-accurate reproduction of a photo | No renderer can; say so before starting |
@@ -136,8 +160,9 @@ blind, not that the technique failed. Prefer a **controlled A/B** over an absolu
 
 - You are about to describe an image you have not read
 - You are about to ask a subagent to look at an image **without pinning an image-capable route**
-- You are about to report a fidelity number without checking coverage
+- You are about to report a fidelity number without separating unpainted from antialiased
 - You are about to claim "improved" with no control and no measurement
+- You are about to call an absolute score a ceiling without an oracle to compare it to
 - The reference is a photo and you are still writing layout code
 - You are about to escalate for Chrome when SVG + sharp would run in-sandbox
 

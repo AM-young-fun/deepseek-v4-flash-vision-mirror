@@ -52,14 +52,23 @@ if (isVector) {
 const rasterPath = isVector ? renderPath : resolve(candPath);
 
 /* ---------- alpha coverage: catch the uncovered-pixel bug at the source ---------- */
+// alpha==0 means genuinely unpainted. 0<alpha<255 is usually ordinary edge antialiasing,
+// which is CORRECT — but at an internal region boundary it means two adjacent polygons each
+// cover ~50% of a shared edge pixel, i.e. a hairline seam. The two cannot be told apart from
+// the alpha channel alone, so report them separately instead of conflating them.
 const candMeta = await sharp(rasterPath).metadata();
-let transparentPixels = 0;
+let unpainted = 0, partialAlpha = 0;
 if (candMeta.hasAlpha) {
   const { data, info } = await sharp(rasterPath).raw().toBuffer({ resolveWithObject: true });
   const C = info.channels;
-  for (let i = 3; i < data.length; i += C) if (data[i] < 255) transparentPixels++;
-  transparentPixels = transparentPixels / (W * H);
+  for (let i = 3; i < data.length; i += C) {
+    if (data[i] === 0) unpainted++;
+    else if (data[i] < 255) partialAlpha++;
+  }
 }
+const px = W * H;
+const unpaintedPct = (unpainted / px) * 100;
+const partialAlphaPct = (partialAlpha / px) * 100;
 
 /* ---------- flatten onto white, never drop alpha ---------- */
 const a = await sharp(resolve(refPath)).flatten({ background: "#ffffff" }).removeAlpha().raw().toBuffer();
@@ -97,9 +106,13 @@ const out = {
   RMSE: +Math.sqrt(mse).toFixed(3),
   PSNR_dB: +(10 * Math.log10((255 * 255) / mse)).toFixed(2),
   maxChannelError: maxErr,
-  candidateTransparentPct: +(transparentPixels * 100).toFixed(3),
-  coverageWarning: transparentPixels > 0
-    ? `candidate has ${(transparentPixels * 100).toFixed(2)}% uncovered/transparent pixels — fix coverage before trusting these numbers`
+  candidateUnpaintedPct: +unpaintedPct.toFixed(3),
+  candidatePartialAlphaPct: +partialAlphaPct.toFixed(3),
+  coverageWarning: unpaintedPct > 0.01
+    ? `candidate leaves ${unpaintedPct.toFixed(2)}% of pixels fully unpainted (alpha==0) — fix coverage before trusting these numbers`
+    : null,
+  antialiasNote: partialAlphaPct > 1
+    ? `${partialAlphaPct.toFixed(2)}% of pixels are partially covered. Normal at outer silhouettes; at an internal region boundary it means hairline seams between adjacent polygons. Not a defect by itself — inspect where they fall.`
     : null,
   edgePixelsPct: +((edgeN / n) * 100).toFixed(2),
   edgeMAE: +(edgeS / Math.max(1, edgeN)).toFixed(2),

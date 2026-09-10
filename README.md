@@ -68,9 +68,12 @@ bug that every numeric metric had missed.
 
 **4. Never trust a single number.**
 
-- **Transparent pixels scored as black.** `removeAlpha()` drops alpha and leaves RGB, so
-  uncovered pixels compare as if black. 7.12% uncovered area cost a full dB *while producing
-  a plausible number*. Flatten onto white; always report coverage.
+- **Transparent pixels scored as black.** `removeAlpha()` drops alpha and leaves RGB, so an
+  uncovered pixel compares as if it were black. Always flatten onto white. Then keep the two
+  alpha conditions apart, because they mean different things: `alpha==0` is genuinely
+  unpainted, while `0<alpha<255` is normally correct edge antialiasing — and a hairline seam
+  only where it falls on an internal region boundary. Conflating them produced a claim of
+  "7.12% uncovered" when 0.13% was unpainted and 6.99% was antialiasing.
 - **One number hides the binding constraint.** Error concentrates at edges — a single MAE
   concealed the fact that 7.4% of pixels carried 34% of the error. Split edge vs flat.
 - **Absolute numbers are meaningless without a control.** Score an alternative so "is it
@@ -84,10 +87,13 @@ bug that every numeric metric had missed.
 | Photograph, painting, illustration | **No** — use the file as-is, or generate a variant |
 
 A continuous-tone target has no recoverable structure. Tracing one yields a lossy stylization,
-not a reproduction: measured here, vectorizing a 964×1340 illustration plateaued at
-**PSNR ≈ 26 dB** no matter what was tried, while the SVG grew to **6–8× the size of the
-source JPEG**. Vectorization does not save anything on continuous-tone input; say so before
-starting.
+not a reproduction: the SVG grew to **6–8× the size of the source JPEG** and still lost the
+detail that matters. Say so before starting.
+
+Then do not mistake a poor score for the method's ceiling. That trace scored 25.33 dB, while a
+**realizable** flat-region rendering built from its own 13-colour palette reaches **29.25 dB**
+and its per-pixel oracle **30.60 dB** — roughly 4 dB of headroom that was the tracer's
+geometry, not a limit of the approach.
 
 ## What's here
 
@@ -108,21 +114,44 @@ from — a complete application of the loop, including the two bugs the loop cau
 
 Numbers quoted above were measured on a 964×1340 source:
 
-| Version | MAE | PSNR | uncovered | SVG |
+| Version | MAE | PSNR | `alpha==0` | SVG |
 |---|---|---|---|---|
-| 14 colours, `evenodd` | 7.287 | 25.33 | 7.12% | 345 KB |
-| 14 colours, `nonzero` + background rect | 7.221 | **26.37** | 0.00% | 1001 KB |
-| 48 colours | **6.127** | 24.69 | 0.00% | 1383 KB |
+| 14 colours, `evenodd`, no background | 7.287 | 25.33 | 0.126% | 345 KB |
+| 14 colours, `nonzero` + background rect | 7.221 | **26.37** | 0.000% | 1001 KB |
+| 48 colours, `nonzero` + background rect | **6.127** | 24.69 | 0.000% | 1383 KB |
 
-Two measurements that changed the design of this skill:
+Ceilings for the first row's **own 13-colour palette**, measured independently of the trace:
+
+| Control | PSNR |
+|---|---|
+| The trace as delivered | 25.33 dB |
+| **Realizable** — per-pixel nearest, then a 3×3 majority filter (contiguous flat regions) | **29.25 dB** |
+| **Oracle** — per-pixel nearest (not reachable by flat regions) | **30.60 dB** |
+
+The trace therefore sits **3.92 dB below what its own palette can realize**. Colour count was
+never the binding constraint; boundary geometry was — of disagreeing pixels, 99.4% lie within
+2 px of a true boundary.
+
+Three further measurements that changed this skill's design:
 
 - **More colours lowers MAE while lowering PSNR** — they trade flat-region accuracy for edge
-  error. Neither number alone describes the result.
+  error, so neither number alone describes the result.
 - **Disabling despeckling cost 4.5 dB.** The intuition that it was injecting error was wrong,
   and only a controlled test showed it.
+- **Coloured scaffolding in a comparison image becomes a finding.** A red divider made vision
+  agents report "red hairlines along the edges"; a `#1e1e22` separator gutter made two of them
+  report a phantom 14th fill colour. Both artifacts belonged to the experimenter.
 
-The fidelity figures for the `evenodd` row were independently reproduced by a separate agent
-working only from this skill: MAE 7.287, PSNR 25.33, transparency 7.1203%.
+### On borrowed eyes
+
+The fidelity numbers above were independently reproduced by a separate agent working only from
+this skill (MAE 7.287, PSNR 25.33, alpha gap 7.1203%), and that agent then corrected the skill:
+the 7.12% it was warned about was 6.99% antialiasing plus 0.13% unpainted.
+
+Twelve pinned vision agents unanimously and correctly distinguished continuous-tone reference
+from quantized render, and correctly identified the lost features. Their **coordinates and
+severity estimates were unreliable** — one reported "dark streak" measured 6 px, another
+reported "speck at row 255" did not exist. Use them for character, not for locating.
 
 ## Requirements
 
