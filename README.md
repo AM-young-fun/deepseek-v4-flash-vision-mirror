@@ -16,6 +16,33 @@ capability belongs to the *route*, not to the model, and a subagent can be pinne
 vision-capable route for a single call. What it must never do is substitute imagination for
 a render.
 
+## The four invariants
+
+Every rule in both skills descends from these four. They are not vision-specific — they apply to
+any verification loop — and each one subsumes many individual failures.
+
+**1. Validate every input, including the ones you produced.**
+At each stage you consume something you did not make and cannot see: a captured reference, a
+render, a metric you wrote. Every serious failure here has been an unvalidated input, never a bad
+edit. A loop that only asks *"does mine match my reference?"* converges confidently on that
+reference's errors.
+
+**2. Name what a check is blind to before you trust it.**
+A check sees only what its frame admits. A metric cannot see a missing element. A crop cannot see
+a framing error. A mean cannot see a distribution. State the blind spot and cover it with a
+*different* check, not a bigger version of the same one.
+
+**3. Name the acceptance criterion before you build the measurement.**
+Then ask whether the measurement is a faithful proxy. A proxy you chose yourself drifts toward
+what you can measure. "Matches the design" and "low MAE" are different claims.
+
+**4. Iteration refines within a frame; it cannot detect a wrong frame.**
+Schedule the frame-breaks explicitly. They will not happen on their own, because everything inside
+the loop looks self-consistent.
+
+Everything below is evidence: the specific measurements that each invariant was learned from.
+The skills themselves stay short and carry only the principles, the procedure, and the tools.
+
 ## The problem this solves
 
 A text-only agent asked to reproduce a design or check its own output has no ground truth.
@@ -82,7 +109,7 @@ Four things it never noticed, all invisible to a region crop:
 `web-repro` exists for those four. Its rules are the procedure; `vision-loop`'s Rule 0 is the
 principle behind them.
 
-## Core rules
+## Evidence — how each invariant was learned
 
 **1. Eyes are borrowed, and the model must be pinned.**
 
@@ -234,9 +261,9 @@ illustration traced while building the skill the opposite held (edges, 7.4% of p
 including the two bugs the loop caught in it (transparent gaps from `fill-rule="evenodd"`, and
 an MAE that reported a sum instead of a mean).
 
-## Evidence
+## Trace measurements
 
-Numbers quoted above were measured on a 964×1340 source:
+The vectorisation figures quoted above, measured on a 964×1340 source:
 
 | Version | MAE | PSNR | `alpha==0` | SVG |
 |---|---|---|---|---|
