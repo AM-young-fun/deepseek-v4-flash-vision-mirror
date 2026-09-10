@@ -103,12 +103,36 @@ vision-loop/
   tiles.mjs         slice any image into transport-safe 1:1 tiles (both caps)
   render-eval.mjs   render a candidate and score it: coverage check, edge/flat split, control-ready
 examples/
-  trace.mjs         worked example: raster -> vector (k-means in OKLab + boundary tracing + Bezier)
+  trace.mjs         raster -> vector: OKLab k-means + boundary tracing + Bezier fitting
+  hero-trace/       a worked run of the loop on a continuous-tone illustration, with measurements
 ```
 
-`examples/trace.mjs` is not part of the skill. It is the tool the rules above were derived
-from — a complete application of the loop, including the two bugs the loop caught in it
-(transparent gaps from `fill-rule="evenodd"`, and an MAE that reported a sum instead of a mean).
+## Worked example
+
+[`examples/hero-trace/`](examples/hero-trace/) runs the loop end to end on an anime key visual —
+a girl with a translucent umbrella on a neon rain-soaked street — and reports what it cost.
+
+![source left, trace render right](examples/hero-trace/compare.jpg)
+
+*Left: the source. Right: the SVG, rasterized back.*
+
+| | |
+|---|---|
+| Source | 1360×2048 WebP, 159 KB — **4.35× the transport budget**, so it had to be tiled to be read |
+| Distinct colours / top-10 share | 132,758 / **6.5%** — continuous-tone, no flat fills |
+| Result | 28 colours, 5,274 closed loops, **24.65 dB**, 0% unpainted |
+| Cost | SVG **665 KB — 4.2× larger than the source**, and still visibly lossy |
+| Ceiling from its own palette | realizable 27.66 dB, oracle 29.93 dB → the trace is **3.01 dB short** |
+
+The example deliberately fails, because the reference is continuous-tone and a flat-colour
+vector cannot reproduce it. What makes it worth reading is the *diagnosis*: on this image the
+palette is the binding constraint (edges carry only 41.7% of the error), whereas on the
+illustration traced while building the skill the opposite held (edges, 7.4% of pixels, carried
+63.9%). Same tool, different failure — which is why the edge/flat split is always reported.
+
+`examples/trace.mjs` is not part of the skill. It is the tool these rules were derived from,
+including the two bugs the loop caught in it (transparent gaps from `fill-rule="evenodd"`, and
+an MAE that reported a sum instead of a mean).
 
 ## Evidence
 

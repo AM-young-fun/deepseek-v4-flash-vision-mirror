@@ -1,5 +1,9 @@
 .DS_Store
-*.png
-*.jpg
-*.jpeg
 node_modules/
+
+# Guard against committing scratch images that live at the repo root.
+# Anchored with a leading slash so example assets under examples/ are unaffected.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
