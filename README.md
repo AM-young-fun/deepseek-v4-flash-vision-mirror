@@ -205,32 +205,31 @@ examples/
 
 [`examples/site-repro/`](examples/site-repro/) rebuilds
 [ayasemai.com/zh/](https://ayasemai.com/zh/) in HTML/CSS — original artwork by the repository
-author — and scores **MAE 1.37 / PSNR 29.92 dB** over a 1440×4235 page.
+author — and scores **MAE 2.20** over a 1440×2637 page, measured against **the real site at the
+acceptance viewport**. Structure matches the live DOM to within 1.4px on every section.
 
-![reference left, reproduction right](examples/site-repro/compare-vs-reference.jpg)
+![real site left, reproduction right](examples/site-repro/compare-vs-reference.jpg)
 
-*Left: the reference. Right: the reproduction.*
+*Left: the real site at 1440×900. Right: the reproduction.*
 
-This example is where the division of labour becomes measurable. The TRAILER heading was
-**completely missing** from the reproduction at one point (a CSS selector bug: `.hero .wrap` also
-matched a nested `.wrap`, pushing the heading 1007px down into the media band). The region MAE
-at that moment was **1.97**; after the heading rendered correctly it was **2.22**.
+**The same page had been attempted before, and failed in a way worth keeping.** That attempt
+reported MAE **1.37** — measured against *its own capture*. Against the real site it was **30.59**
+in the first 900px and **47.35** full-page. The nav scored 3.68 and was genuinely right; the hero
+copy scored **64.88** while vision agents were calling it a faithful match. It is documented in
+[`examples/site-repro/FAILED-ATTEMPT.md`](examples/site-repro/FAILED-ATTEMPT.md).
 
-**The metric went up when the defect was fixed, and barely moved while an entire heading was
-absent.** Vision agents caught it on the first look. That is the case for vision being the
-acceptance standard and not the metric:
+What the loop could not see, and why:
 
-| Role | Good at | Not good at |
-|---|---|---|
-| Vision agent | noticing *that* something is wrong, and *what kind* (missing / mispositioned / wrong colour) | explaining *why*; exact coordinates |
-| Programmatic measurement | quantifying *how much*, once you know what to measure | deciding what is wrong; naive statistics can be too coarse |
-| Pixel MAE / PSNR | tracking direction across revisions | being an acceptance criterion |
+| Failure | Invisible to a crop because |
+|---|---|
+| Capture taken at a viewport as tall as the page (a `92vh` hero made it 1598px too tall) | every crop is self-consistent at any page height |
+| Capture truncated — page reports `scrollHeight` 5706, image was 4235 | a truncated page looks like a shorter page |
+| Scroll-revealed sections rendered as **blank bands**; a `<video>` player and a whole featured-episode card were reproduced as empty rectangles | a blank band is indistinguishable from a designed flat band |
+| A real `<video>` mistaken for a flat block | pixels cannot tell "did not load" from "by design" |
 
-Neither side is taken on trust. In the same run the agent **fabricated** a defect — reporting the
-body text "printed twice" when measurement showed it was the hero artwork showing through, the
-text simply being 8px too low — while my own fill-ratio statistic was **too coarse** to see that
-the language-pill dot was a ring rather than a disc, which the agent's luminance profile got
-right.
+That is the case for `web-repro` existing separately, and for invariant 1 being first. The rebuild
+found those four things in its **first three steps** — `check-reference`, `probe-dom`, and a
+structural diff — before any region crop was taken.
 
 ### The continuous-tone case: tracing what cannot be traced
 

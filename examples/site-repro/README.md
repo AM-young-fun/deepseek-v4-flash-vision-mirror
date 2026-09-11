@@ -1,154 +1,119 @@
 # Example: reproducing a live website in HTML/CSS
 
-A worked run of the loop on the **structural** artifact class — the case the loop is actually
-for. The reference is [ayasemai.com/zh/](https://ayasemai.com/zh/) (original artwork by the
-repository author); the output is hand-written HTML/CSS, not a trace.
+A worked run of `web-repro` on the **structural** artifact class — the case the loop is for. The
+reference is [ayasemai.com/zh/](https://ayasemai.com/zh/) (original artwork by the repository
+author); the output is hand-written HTML/CSS, not a trace.
 
-Contrast with [`../hero-trace/`](../hero-trace/), which deliberately does the *wrong* thing to a
-continuous-tone image and measures what it costs. This example does the right thing.
-
-> ## ⚠ Correction: the numbers below measure the wrong thing
->
-> This example was produced **before** the reference-validation rule existed, and its headline
-> score is self-referential. The 1.37 MAE compares the reproduction against **the capture this
-> process itself produced**, not against the site. Measured against the real site at a real
-> viewport:
->
-> | Compared against | MAE |
-> |---|---|
-> | Its own capture | **1.37** |
-> | Real site, first 900px at a 1440×900 window | **30.59** |
-> | Real site, full page | **47.35** |
->
-> The navigation bar scored 3.68 — genuinely right. The hero copy scored **64.88** while vision
-> agents were calling it a faithful match.
->
-> Three structural failures, none visible to a region crop:
->
-> - the capture used a viewport **as tall as the page**, so a `min-h-[92vh]` hero made it
->   1598px taller than the real page at a normal window
-> - the capture was **truncated** — the page reports `scrollHeight` 5706 at that viewport, the
->   image is 4235
-> - below-the-fold content rendered as **blank bands** because scroll-reveal animations never
->   fired, so a video player and a whole featured-episode card were reproduced as empty
->   rectangles
->
-> Keep this example as a record of the failure mode, not as a fidelity claim. The corrected
-> procedure is [`../../web-repro/SKILL.md`](../../web-repro/SKILL.md).
+This directory previously held a *failed* attempt whose headline score was self-referential and
+whose page structure was wrong. That attempt is documented in
+[`FAILED-ATTEMPT.md`](FAILED-ATTEMPT.md); this README describes the rebuild.
 
 ## Result
 
-Measured against the capture (see the correction above before reading anything into these):
+Measured against **the real site at the acceptance viewport** — not against a capture of itself:
 
-Rendered at 1440×4235 against a 1440×4235 reference capture:
-
-| Metric | Value |
+| Region | MAE |
 |---|---|
-| Full page MAE | **1.37** / 255 |
-| Full page PSNR | **29.92 dB** |
+| header | 3.68 |
+| hero | 3.95 |
+| trailer band | 0.74 |
+| video player | 0.63 |
+| featured-episode card | 2.66 |
+| platforms band | 1.15 |
+| footer | 1.92 |
+| **whole page** | **2.20** |
 
-Region by region:
+Structure, from `probe-dom.mjs` against the live site, matched to within 1.4px on every section
+(header 57, hero 828 = `92vh`, trailer 916, player 624, card section 363, platforms 295, footer
+179; total 2636 vs 2637).
 
-| Region | MAE | Note |
-|---|---|---|
-| Navigation bar | 2.30 | |
-| Hero copy column | 4.53 | dominated by font-file substitution, not layout |
-| TRAILER heading | 2.22 | |
-| Media band | **0.00** | a flat colour block, reproduced exactly |
-| Footer | 1.02 | |
+Final vision verdicts, from pinned image-capable agents comparing 1:1 pairs:
+**hero = faithful match**; player, card and header = close, with the remaining error dominated by
+font-file substitution.
 
-Final vision verdicts, from pinned image-capable agents comparing 1:1 crops:
-**hero = faithful match**; nav, trailer and footer = close with minor differences only.
+![real site left, reproduction right](compare-vs-reference.jpg)
 
-![reference left, reproduction right](compare-vs-reference.jpg)
+*Left: the real site at 1440×900. Right: the reproduction.*
 
-*Left: the reference. Right: the reproduction.*
+## Method — what the corrected procedure actually caught
 
-## Why the number alone would have been enough to fail this
+The four invariants of [`vision-loop`](../../vision-loop/SKILL.md), instantiated per
+[`web-repro`](../../web-repro/SKILL.md). In order, with what each step caught:
 
-The TRAILER heading was completely missing from the reproduction at one point — a CSS selector
-bug where `.hero .wrap` also matched a nested `.wrap` inside the heading block, adding 1007px of
-padding and pushing the heading down into the media band.
+**1. `check-reference.mjs` first.** The first capture was **rejected**: 4235px against a page that
+reports 2637px, and viewport-dependent (2637 at h=900, 3134 at h=1440), naming `div.grain` and
+`main.min-h-screen` as the causes. Re-captured at 1440×900 with `--scroll`, it passes.
 
-Region MAE at that moment: **1.97**. After the heading rendered in the correct place: **2.22**.
+**2. `probe-dom.mjs` before touching pixels.** This is what made the rebuild possible. The real
+structure is nothing like what pixels alone suggested:
 
-**The metric went up when the defect was fixed, and barely moved while an entire heading was
-absent.** A verification standard that cannot see a missing heading is not a verification
-standard. The vision agents caught it immediately; the metric never would have.
+```
+div.grain    fixed   1440x900   100vh texture overlay      <- invisible in a capture
+header       fixed   1440x57    border-b                   <- had been built static
+main                 1440x2458  min-h-screen pt-14         <- the 56px offset that clears the header
+  section.hero       1440x828   min-h-[92vh] overflow-hidden
+  section.trailer    1152x916   wrap py-24, contains video 1110x624
+  section.ep01       1152x363   wrap pb-24
+  section.platforms  1440x295   border-t, 80px padding
+footer               1440x179   border-t
+```
 
-## What the loop caught, and what it got wrong
+**3. Three-way verification.** The structural pass immediately caught that the whole page was
+56px high — the `pt-14` that clears the fixed header, which a region crop could never reveal.
 
-Four real defects the pixel metrics could not have found:
+**4. Region 1:1 pairs for detail.** These found the defects the metrics could not:
 
-1. The entire TRAILER heading not rendering (the selector bug above)
-2. The footer wordmark inheriting `letter-spacing: 2.8px` from the nav rule, spreading the logo
-   out instead of rendering it as one solid block
-3. The footer wordmark wrongly rendered with the nav's pink→cyan two-tone stop
-4. The four nav links sitting 33px too far left, because a flex `gap` also applied between the
-   last link and the pill
+- the H1's `20XX` rendering as one merged smear — the reference's Latin is a **Didone**, and
+  swapping the span to `Didot` (macOS-supplied) separated all four glyphs to within 5px
+- the letterspaced subtitle 31px too wide — the reference's advance sequence is exactly
+  `21,21,15,21,21,15,16,16` = 14px font + 7px tracking over nine glyphs with **no spaces**; the
+  reproduction had two spaces around the dash
+- the featured-episode marker being a filled disc where the reference has a dim soft ring
+- the card's text column ~14px too narrow, wrapping one glyph early
+- the seek bar reading 55/255 too bright over the video — the frame asset had the reference's own
+  seek bar baked into it, so a CSS track drawn on top doubled it
 
-And one it **fabricated**: it reported the body paragraph's first line "printed twice". Direct
-measurement showed the ink came from the hero *artwork* showing through — the text was simply 8px
-too low, so rows that should have been covered by text exposed the image beneath. The observation
-("something is wrong in this region") was correct; the mechanism was invented.
+**5. Measure, never take the explanation on trust.** In the same run the comparator claimed the
+body text was "printed twice"; direct pixel measurement showed the line-1 ink extent was identical
+in both (both ending at x1181), and the claim was a misreading. Conversely my own `--wrap`
+statistic was too coarse to see a ring-versus-disc on the nav pill, which the agent's luminance
+profile got right.
 
-Conversely, my own measurement was wrong once. I dismissed its claim that the language-pill dot
-was a ring rather than a disc, using a fill-ratio threshold (27% vs 27%). A luminance *profile*
-settled it: the reference is bright rim (~180) with a dimmer core (~133), and both exceed a
-naive threshold. **The agent's profile measurement was finer-grained than my statistic.**
+## What is not reproduced
 
-## How the two roles divide
-
-| Role | Good at | Not good at |
-|---|---|---|
-| Vision agent | noticing *that* something is wrong, and *what kind* (missing / wrong position / wrong colour) | explaining *why*; localizing to exact coordinates |
-| Programmatic measurement | quantifying *how much*, once you know what to measure | deciding what is wrong; naive statistics can be too coarse |
-| Pixel MAE / PSNR | tracking direction of travel across revisions | anything used as an acceptance criterion |
-
-The division of labour that worked: **the agent finds it, I verify it, and no explanation from
-either side is taken on trust.**
-
-## Method
-
-1. Capture the reference by rendering the live site at the target viewport with `tools/shot-attach.mjs`.
-2. Read the reference at two scales — a downscaled whole page for structure (layout, bands,
-   palette) and 1:1 tiles for detail (exact copy, sizes, colours). Both via pinned
-   `deepseek-v4-flash-vision-exp` agents, because the working model has no vision.
-3. Write the HTML/CSS from the measurements.
-4. Render it, then compare **region by region** at 1:1, side by side with a *neutral* grey
-   separator and an explicit instruction that the separator is scaffolding.
-5. Measure the residual per region, fix, repeat.
-
-Step 4 is where the value is. A whole-page comparison gets downscaled to mush; a 1:1 region pair
-survives transport intact, and because both halves share crop coordinates a difference the agent
-spots is locatable without trusting its coordinates.
+- **Three bitmaps** (`assets/`): the hero illustration, the portrait video frame, and the
+  featured-episode still. A painting is an asset, not code; **those regions are excluded from the
+  fidelity claim** — comparing them is comparing a file against itself.
+- **Fonts.** The residual in the header (3.68) and hero (3.95) is font-file substitution. Verified
+  rather than asserted: every glyph run lands within 1–5px of the reference while the glyph shapes
+  differ. Where the reference's *face* was identifiable — the H1's Didone Latin — it was matched
+  with an installed font instead of excused.
+- **The actual trailer video**, which is a `<video>` on the live site; a still is placed in the
+  player and the chrome (controls, seek bar) is rebuilt in CSS.
+- Hover/focus states, other breakpoints, and the animation that drives the grain and rain layers
+  (both are approximated with CSS gradients).
 
 ## Reproduce
 
 ```bash
-# once: a long-lived render server (the only step needing wider sandbox permissions)
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --no-sandbox \
-  --disable-gpu --disable-breakpad --disable-crash-reporter --hide-scrollbars \
-  --force-color-profile=srgb --remote-debugging-port=9222 \
-  --user-data-dir=/tmp/dsh-chrome about:blank &
+# once: a long-lived render server
+B="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+"$B" --headless --no-sandbox --disable-gpu --disable-breakpad --no-crash-reporter \
+     --hide-scrollbars --force-color-profile=srgb --remote-debugging-port=9222 \
+     --user-data-dir=/tmp/dsh-chrome about:blank &
 
-# capture the reference, then render the reproduction
-node ../../tools/shot-attach.mjs "https://ayasemai.com/zh/" reference-full.png 1440 4235 1 --wait=3000 --full
-node ../../tools/shot-attach.mjs index.html mine-full.png 1440 4235 1 --full
+# 1. capture at the acceptance viewport, reveals fired
+node ../../tools/shot-attach.mjs "https://ayasemai.com/zh/" reference-1440x900.png \
+     1440 900 1 --wait=1500 --full --scroll
 
-# read back the reproduction's own layout, in fractional CSS px
-node ../../tools/probe-dom.mjs index.html --sel=".eyebrow,h1,.lede,.btn"
+# 2. GATE: refuse to build on an invalid reference
+node ../../tools/check-reference.mjs "https://ayasemai.com/zh/" reference-1440x900.png
+
+# 3. the structural model
+node ../../tools/probe-dom.mjs "https://ayasemai.com/zh/" --w=1440 --h=900 \
+     --sel="body > *, header, main section, video, footer"
+
+# 4. render and verify globally, structurally, then locally
+node ../../tools/shot-attach.mjs index.html mine.png 1440 900 1 --full --scroll
+node ../../tools/probe-dom.mjs index.html --w=1440 --h=900 --sel="header, main > section, footer"
 ```
-
-## What is not reproduced
-
-- **The hero artwork** (`assets/hero.webp`). It is a bitmap painting; no renderer repaints it.
-  It is placed as the site's own asset, and **the artwork region is excluded from the fidelity
-  claim above** — comparing it would be comparing a file against itself.
-- **Fonts.** The residual in the hero copy column (MAE 4.53, the worst region) is font-file
-  substitution, not layout error. Every measured position is within 1–2px; the glyphs differ.
-- **The trailer video.** It did not render in the reference capture either — that band is a flat
-  `#0a0d13`, which is what got reproduced.
-- **Responsive breakpoints, hover/focus states, animation.** Absent from a static reference.
-- **The design.** This loop reproduces a reference; it does not design. With no reference it has
-  nothing to align to.
